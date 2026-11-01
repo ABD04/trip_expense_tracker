@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trip Expense Tracker</title>
+<style>
+/* ===== Theme: dark teal glass over camp-night background (colours only; no logic changes) ===== */
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:rgba(3,20,25,.55);--card:rgba(8,42,48,.62);--ink:#e9f6f7;--mut:#a3bfc6;--line:rgba(94,234,212,.22);--acc:#40e0d0;--acc2:rgba(64,224,208,.16);--bad:#ff9a8b;
+--paid:#1f5a32;--adv:#25496e;--need:#6b6218;--loc:#6e2a33;--th:#0d7f7a;--glow:rgba(64,224,208,.22);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);min-height:100%;background:#041015}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;min-height:100dvh;position:relative;background:transparent;color:var(--ink);font:15px/1.5 "DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+
+/* Full-screen background image (fixed layer works on iOS/Android too) */
+body::before{content:"";position:fixed;inset:0;z-index:-1;
+ background:linear-gradient(rgba(2,14,18,.35),rgba(2,14,18,.55)),url("images/trip-bg.png") center center/cover no-repeat;background-color:#041015}
+/* Landing + setup page: lighter overlay so the artwork shines */
+body:has(#setup:not(.hid))::before{background:linear-gradient(rgba(2,14,18,.18),rgba(2,14,18,.42)),url("images/trip-bg.png") center center/cover no-repeat;background-color:#041015}
+/* Expense dashboard: darker overlay for table readability */
+body:has(#app:not(.hid))::before{background:linear-gradient(rgba(2,14,18,.62),rgba(2,14,18,.78)),url("images/trip-bg.png") center center/cover no-repeat;background-color:#041015}
+
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;margin:0}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin:8px 0 14px;text-shadow:0 2px 14px rgba(0,0,0,.65)}
+header h1{font-size:28px;color:#fff}header p{margin:2px 0 0;color:#cfe6ea}
+/* Landing: centre the title above the setup card */
+body:has(#setup:not(.hid)) header{justify-content:center;text-align:center;margin-top:5vh}
+body:has(#setup:not(.hid)) header h1{font-size:clamp(28px,5vw,42px)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:14px;
+ box-shadow:0 10px 36px var(--glow),0 2px 10px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2)}
+#setup{max-width:780px;margin:2vh auto 24px}
+#setup h2{font-size:24px;margin-bottom:4px}
+label{display:block;font-weight:600;margin:12px 0 4px}small{color:var(--mut)}
+input,select,button{font:inherit;color:var(--ink)}
+input[type=text],input[type=number],select,textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+input::placeholder{color:#7fa0a8}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+select option{background:#0b2a30;color:#e9f6f7}
+button{cursor:pointer;border:1px solid var(--acc);background:rgba(8,42,48,.55);color:var(--acc);padding:8px 14px;border-radius:10px;font-weight:600;transition:background .15s,box-shadow .15s}
+button:hover{background:var(--acc2);box-shadow:0 0 14px var(--glow)}
+button.pri{background:linear-gradient(135deg,#19b8aa,#0d7f7a);color:#fff;border-color:#40e0d0;box-shadow:0 4px 16px var(--glow)}
+button.pri:hover{background:linear-gradient(135deg,#27cfc0,#119089)}
+button.ghost{border-color:var(--line);color:var(--mut)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.cats{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.cats label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500;border:1px solid var(--line);padding:7px 12px;border-radius:999px;background:var(--bg)}
+.cats input{accent-color:#2cc9b9}
+nav{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding:2px}
+nav button{border-color:var(--line);color:var(--mut);white-space:nowrap;background:rgba(8,42,48,.55)}nav button.on{background:var(--acc2);color:var(--acc);border-color:var(--acc)}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{background:var(--th);color:#fff;font-size:12.5px;padding:8px 6px;text-align:center;position:sticky;top:0}
+td{border-bottom:1px solid var(--line);padding:4px;text-align:right;font-variant-numeric:tabular-nums}
+td.l{text-align:left}td input,td select{padding:6px;background:transparent;border-color:transparent}td input:focus,td select:focus{border-color:var(--acc);background:rgba(3,20,25,.8)}
+td input.n{text-align:right;width:84px}td input.q{width:56px;text-align:right}td input.t{min-width:120px}
+tr.tot td{font-weight:700;background:var(--acc2);border-top:2px solid var(--acc)}
+.s-Paid{background:var(--paid)}.s-Advance{background:var(--adv)}.s-Need{background:var(--need)}.s-Loc{background:var(--loc)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 8px 26px var(--glow);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.kpi b{display:block;font-size:21px;font-family:"Fraunces",Georgia,serif}.kpi span{color:var(--mut);font-size:13px}
+.neg{color:var(--bad)}.bar{height:8px;background:rgba(255,255,255,.14);border-radius:6px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc)}
+.lg{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px;font-size:13px}.lg span{padding:2px 10px;border-radius:999px;color:var(--ink)}
+.dn{display:flex;gap:24px;align-items:center;flex-wrap:wrap}.dl{flex:1;min-width:240px;display:grid;gap:10px}.dr{display:flex;justify-content:space-between;gap:8px}.dr span{display:flex;align-items:center}.dr i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+.hid{display:none}.warn{background:var(--loc);padding:10px 14px;border-radius:12px;margin-bottom:12px}
+
+/* Tablet */
+@media(max-width:900px){.wrap{padding:12px}.card{padding:16px}}
+/* Mobile */
+@media(max-width:600px){.grid2{grid-template-columns:1fr}header h1{font-size:23px}.wrap{padding:10px}.card{border-radius:16px;padding:14px}
+ body:has(#setup:not(.hid)) header{margin-top:2vh}#setup{margin-top:0}}
+</style></head><body><div class="wrap">
+<header><div><h1 id="ttl">Trip Expense Tracker</h1><p id="sub">Plan the budget, track who has paid, split it for everyone.</p></div>
+<div id="hbtn" class="hid"><button class="ghost" onclick="go('setup')">Edit trip</button> <button onclick="exportX()">Download Excel</button> <button class="ghost" onclick="resetAll()">New trip</button></div></header>
+
+<section id="setup" class="card">
+<h2>Tell us about your trip</h2>
+<div class="grid2"><div><label>Trip name</label><input type="text" id="tn" placeholder="e.g. Varkala weekend with friends"></div>
+<div><label>Destination</label><input type="text" id="td" placeholder="e.g. Varkala, Kerala"></div>
+<div><label>Budget per person (₹)</label><input type="number" id="tb" placeholder="8000" min="0"></div>
+<div><label>Who is going? <small>(names separated by commas)</small></label><input type="text" id="tm" placeholder="P1,P2,P3,P4"></div></div>
+<label>What will the money go on? <small>(tick all that apply, you can rename or add more later)</small></label>
+<div class="cats" id="cats"></div>
+<p><button class="pri" onclick="build()">Create my expense sheet</button> <small id="err" class="neg"></small></p>
+</section>
+
+<div id="app" class="hid">
+<nav><button data-t="exp" onclick="go('exp')">Expenses</button><button data-t="sum" onclick="go('sum')">Summary</button><button data-t="per" onclick="go('per')">Per person</button></nav>
+
+<section id="exp"><div class="card"><div class="lg"><span class="s-Paid">Paid</span><span class="s-Advance">Advance Paid</span><span class="s-Need">Need to Pay</span><span class="s-Loc">Pay at Location</span></div>
+<small>Fill in Qty, Rate and Advance Required, then set the Status. Everything else is calculated for you.</small>
+<div class="sc" style="margin-top:8px"><table><thead><tr><th>Category</th><th>Expense</th><th>Qty</th><th>Rate (₹)</th><th>Total</th><th>Advance required</th><th>Status</th><th>Amount paid</th><th>Advance paid</th><th>Advance pending</th><th>Balance to pay</th><th></th></tr></thead><tbody id="tb2"></tbody></table></div>
+<p><button onclick="addRow()">+ Add expense</button></p></div></section>
+
+<section id="sum" class="hid"><div id="sumv"></div></section>
+<section id="per" class="hid"><div id="perv"></div></section>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const CATS=["Travel – Going","Travel – Return","Stay","Food","Local Travel","Entry Tickets","Shopping","Other"];
+const STS=["Paid","Advance Paid","Need to Pay","Pay at Location"];
+const SC={"Paid":"s-Paid","Advance Paid":"s-Advance","Need to Pay":"s-Need","Pay at Location":"s-Loc"};
+const $=id=>document.getElementById(id);
+const inr=n=>"₹"+Math.round(n||0).toLocaleString("en-IN");
+let st={trip:null,rows:[]},tab="setup";
+try{const s=localStorage.getItem("tripTracker");if(s)st=JSON.parse(s)}catch(e){}
+function save(){try{localStorage.setItem("tripTracker",JSON.stringify(st))}catch(e){}}
+$("cats").innerHTML=CATS.map((c,i)=>`<label><input type="checkbox" value="${c}" ${i<6?"checked":""}> ${c}</label>`).join("");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function calc(r){const t=(+r.qty||0)*(+r.rate||0),a=+r.adv||0;
+ const paid=r.status=="Paid"?t:r.status=="Advance Paid"?a:0;
+ return{t,paid,ap:r.status=="Advance Paid"?a:0,pend:(r.status=="Need to Pay"||r.status=="Pay at Location")?a:0,bal:t-paid,loc:r.status=="Pay at Location"?t-paid:0}}
+function build(){
+ const name=$("tn").value.trim(),dest=$("td").value.trim(),b=+$("tb").value,
+ m=$("tm").value.split(",").map(s=>s.trim()).filter(Boolean),
+ cs=[...document.querySelectorAll("#cats input:checked")].map(i=>i.value);
+ if(!b||b<=0)return $("err").textContent="Please enter the budget per person.";
+ if(!m.length)return $("err").textContent="Please enter at least one person.";
+ if(!cs.length)return $("err").textContent="Pick at least one expense type.";
+ $("err").textContent="";
+ const old=st.rows,keep=old.length&&confirm("Keep your existing expense rows?");
+ st.trip={name:name||"My Trip",dest,budget:b,members:m};
+ if(!keep)st.rows=cs.map(c=>({cat:c,item:c,qty:/Local|Shop|Other/.test(c)?1:m.length,rate:"",adv:"",status:"Need to Pay"}));
+ save();go("exp")}
+function go(t){tab=t;
+ const has=!!st.trip;$("setup").classList.toggle("hid",t!="setup");$("app").classList.toggle("hid",t=="setup"||!has);$("hbtn").classList.toggle("hid",!has);
+ ["exp","sum","per"].forEach(x=>$(x).classList.toggle("hid",x!=t));
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t==t));
+ if(has){$("ttl").textContent=st.trip.name;$("sub").textContent=(st.trip.dest?st.trip.dest+" · ":"")+st.trip.members.length+" people · "+inr(st.trip.budget)+" each";
+  if(t=="exp")drawRows();refresh()}
+ else{$("ttl").textContent="Trip Expense Tracker"}
+ if(t=="setup"&&has){$("tn").value=st.trip.name;$("td").value=st.trip.dest;$("tb").value=st.trip.budget;$("tm").value=st.trip.members.join(", ")}}
+function drawRows(){
+ $("tb2").innerHTML=st.rows.map((r,i)=>`<tr data-i="${i}">
+ <td class="l"><input class="t" data-k="cat" value="${esc(r.cat)}"></td><td class="l"><input class="t" data-k="item" value="${esc(r.item)}"></td>
+ <td><input class="q" type="number" min="0" data-k="qty" value="${esc(r.qty)}"></td><td><input class="n" type="number" min="0" data-k="rate" value="${esc(r.rate)}"></td>
+ <td data-c="t"></td><td><input class="n" type="number" min="0" data-k="adv" value="${esc(r.adv)}"></td>
+ <td><select data-k="status" class="${SC[r.status]}">${STS.map(s=>`<option ${s==r.status?"selected":""}>${s}</option>`).join("")}</select></td>
+ <td data-c="paid"></td><td data-c="ap"></td><td data-c="pend"></td><td data-c="bal"></td><td><button class="ghost" onclick="delRow(${i})" title="Remove">✕</button></td></tr>`).join("")+
+ `<tr class="tot"><td class="l" colspan="4">Total</td><td data-c="T_t"></td><td data-c="T_adv"></td><td></td><td data-c="T_paid"></td><td data-c="T_ap"></td><td data-c="T_pend"></td><td data-c="T_bal"></td><td></td></tr>`}
+$("tb2").addEventListener("input",e=>{const k=e.target.dataset.k;if(!k)return;const i=e.target.closest("tr").dataset.i;
+ st.rows[i][k]=e.target.value;if(k=="status")e.target.className=SC[e.target.value];save();refresh()});
+function addRow(){st.rows.push({cat:"Other",item:"",qty:1,rate:"",adv:"",status:"Need to Pay"});save();drawRows();refresh()}
+function delRow(i){st.rows.splice(i,1);save();drawRows();refresh()}
+function totals(){const T={t:0,adv:0,paid:0,ap:0,pend:0,bal:0,loc:0};
+ st.rows.forEach(r=>{const c=calc(r);T.t+=c.t;T.adv+=+r.adv||0;T.paid+=c.paid;T.ap+=c.ap;T.pend+=c.pend;T.bal+=c.bal;T.loc+=c.loc});return T}
+const PAL=["#3b82f6","#0b9a8a","#e0463b","#f5b800","#16a34a","#8b5cf6","#ec4899","#f97316"];
+function chart(){
+ const rs=st.rows.filter(r=>calc(r).t>0),done=rs.filter(r=>r.status=="Paid").length,n=st.trip.members.length;
+ if(!rs.length)return"";
+ if(done<rs.length)return`<div class="card"><h3>Where your money went</h3><p><small>This chart unlocks when every expense is marked Paid. ${done} of ${rs.length} paid so far.</small></p><div class="bar"><i style="width:${done/rs.length*100}%"></i></div></div>`;
+ const cs=[...new Set(rs.map(r=>r.cat||"Other"))].map(c=>({c,v:rs.filter(r=>(r.cat||"Other")==c).reduce((a,r)=>a+calc(r).t,0)})).sort((a,b)=>b.v-a.v),tot=cs.reduce((a,x)=>a+x.v,0),C=2*Math.PI*70;let off=0;
+ const seg=cs.map((x,i)=>{const l=x.v/tot*C,s=`<circle r="70" cx="100" cy="100" fill="none" stroke="${PAL[i%8]}" stroke-width="38" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;off+=l;return s}).join("");
+ return`<div class="card"><h3>Where your money went</h3><div class="dn"><svg viewBox="0 0 200 200" width="230" height="230">${seg}<text x="100" y="96" text-anchor="middle" font-size="11" fill="currentColor" opacity=".6">Total spent</text><text x="100" y="116" text-anchor="middle" font-size="17" font-weight="700" fill="currentColor">${inr(tot)}</text></svg><div class="dl">${cs.map((x,i)=>`<div><div class="dr"><span><i style="background:${PAL[i%8]}"></i>${esc(x.c)}</span><b>${inr(x.v)} · ${(x.v/tot*100).toFixed(1)}%</b></div><div class="bar"><i style="width:${x.v/tot*100}%;background:${PAL[i%8]}"></i></div></div>`).join("")}<small>${inr(tot/n)} per person · ${inr(st.trip.budget-tot/n)} left of each ${inr(st.trip.budget)} budget</small></div></div></div>`}
+function refresh(){if(!st.trip)return;const T=totals();
+ document.querySelectorAll("#tb2 tr[data-i]").forEach(tr=>{const c=calc(st.rows[tr.dataset.i]);
+  ["t","paid","ap","pend","bal"].forEach(k=>tr.querySelector(`[data-c=${k}]`).textContent=inr(c[k]))});
+ const set=(k,v)=>{const el=document.querySelector(`[data-c=${k}]`);if(el)el.textContent=inr(v)};
+ set("T_t",T.t);set("T_adv",T.adv);set("T_paid",T.paid);set("T_ap",T.ap);set("T_pend",T.pend);set("T_bal",T.bal);
+ const n=st.trip.members.length,B=st.trip.budget*n,rem=B-T.t;
+ const K=(l,v,neg)=>`<div class="kpi"><span>${l}</span><b class="${neg&&v<0?"neg":""}">${inr(v)}</b></div>`;
+ const cats=[...new Set(st.rows.map(r=>r.cat||"Other"))];
+ let h=(rem<0?`<div class="warn">You are over budget by ${inr(-rem)}. Reduce some expenses or raise the budget.</div>`:"")+
+ `<div class="kpis">${K("Total group budget",B)}${K("Planned expenses",T.t)}${K("Remaining budget",rem,1)}${K("Paid so far",T.paid)}${K("Advance paid",T.ap)}${K("Advance pending",T.pend)}${K("Balance to pay",T.bal)}${K("Pay at location",T.loc)}</div>
+ <div class="card"><h3>Budget by category</h3><div class="sc"><table><thead><tr><th>Category</th><th>Total</th><th>Per person</th><th>Paid</th><th>Balance</th><th>Share of budget</th></tr></thead><tbody>`+
+ cats.map(c=>{let t=0,p=0,b=0;st.rows.filter(r=>(r.cat||"Other")==c).forEach(r=>{const x=calc(r);t+=x.t;p+=x.paid;b+=x.bal});
+  const pc=B?Math.min(100,t/B*100):0;return`<tr><td class="l">${esc(c)}</td><td>${inr(t)}</td><td>${inr(t/n)}</td><td>${inr(p)}</td><td>${inr(b)}</td><td style="min-width:120px"><div class="bar"><i style="width:${pc}%"></i></div><small>${pc.toFixed(0)}%</small></td></tr>`}).join("")+
+ `<tr class="tot"><td class="l">Total</td><td>${inr(T.t)}</td><td>${inr(T.t/n)}</td><td>${inr(T.paid)}</td><td>${inr(T.bal)}</td><td></td></tr></tbody></table></div></div>`;
+ $("sumv").innerHTML=h+chart();
+ let p=`<div class="card"><h3>Each person (equal split)</h3><div class="sc"><table><thead><tr><th>Name</th><th>Budget</th><th>Expense share</th><th>Paid</th><th>Advance paid</th><th>Advance pending</th><th>Balance to pay</th><th>Pay at location</th><th>Remaining budget</th></tr></thead><tbody>`+
+ st.trip.members.map(m=>`<tr><td class="l"><b>${esc(m)}</b></td><td>${inr(st.trip.budget)}</td><td>${inr(T.t/n)}</td><td>${inr(T.paid/n)}</td><td>${inr(T.ap/n)}</td><td>${inr(T.pend/n)}</td><td>${inr(T.bal/n)}</td><td>${inr(T.loc/n)}</td><td class="${rem<0?"neg":""}">${inr(st.trip.budget-T.t/n)}</td></tr>`).join("")+
+ `</tbody></table></div></div><div class="card"><h3>Share of each expense</h3><div class="sc"><table><thead><tr><th>Expense</th><th>Total</th>${st.trip.members.map(m=>`<th>${esc(m)}</th>`).join("")}</tr></thead><tbody>`+
+ st.rows.map(r=>{const t=calc(r).t;return`<tr><td class="l">${esc(r.item||r.cat)}</td><td>${inr(t)}</td>${st.trip.members.map(()=>`<td>${inr(t/n)}</td>`).join("")}</tr>`}).join("")+`</tbody></table></div></div>`;
+ $("perv").innerHTML=p}
+async function addChart(buf,k,pr0){
+ try{const z=await JSZip.loadAsync(buf),last=4+k,R='http://schemas.openxmlformats.org/officeDocument/2006/relationships',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const dp=PAL.concat(PAL).slice(0,k).map((c,i)=>`<c:dPt><c:idx val="${i}"/><c:bubble3D val="0"/><c:spPr><a:solidFill><a:srgbClr val="${c.slice(1)}"/></a:solidFill></c:spPr></c:dPt>`).join("");
+  z.file("xl/charts/chart1.xml",`${H}<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${R}"><c:chart><c:title><c:tx><c:rich><a:bodyPr/><a:p><a:pPr><a:defRPr sz="1400" b="1"/></a:pPr><a:r><a:rPr lang="en-US" sz="1400" b="1"/><a:t>Where the money went (amount paid by category)</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/><c:pieChart><c:varyColors val="1"/><c:ser><c:idx val="0"/><c:order val="0"/><c:tx><c:strRef><c:f>'Spending Chart'!$Q$4</c:f></c:strRef></c:tx>${dp}<c:dLbls><c:dLblPos val="outEnd"/><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="1"/><c:showSerName val="0"/><c:showPercent val="1"/><c:showBubbleSize val="0"/><c:separator>
+</c:separator><c:showLeaderLines val="1"/></c:dLbls><c:cat><c:strRef><c:f>'Spending Chart'!$P$5:$P$${last}</c:f></c:strRef></c:cat><c:val><c:numRef><c:f>'Spending Chart'!$Q$5:$Q$${last}</c:f></c:numRef></c:val></c:ser><c:firstSliceAng val="0"/></c:pieChart></c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="0"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`);
+  z.file("xl/drawings/drawing1.xml",`${H}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:twoCellAnchor><xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>3</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>14</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>28</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="Chart 1"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${R}" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor></xdr:wsDr>`);
+  z.file("xl/drawings/_rels/drawing1.xml.rels",`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/chart" Target="../charts/chart1.xml"/></Relationships>`);
+  const rp="xl/worksheets/_rels/sheet4.xml.rels",rel=`<Relationship Id="rIdChart1" Type="${R}/drawing" Target="../drawings/drawing1.xml"/>`,ex=z.file(rp);
+  z.file(rp,ex?(await ex.async("string")).replace("</Relationships>",rel+"</Relationships>"):`${H}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rel}</Relationships>`);
+  const sp="xl/worksheets/sheet4.xml";z.file(sp,(await z.file(sp).async("string")).replace("</worksheet>",`<drawing xmlns:r="${R}" r:id="rIdChart1"/></worksheet>`));
+  z.file("[Content_Types].xml",(await z.file("[Content_Types].xml").async("string")).replace("</Types>",'<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>'));
+  return await z.generateAsync({type:"arraybuffer"})}catch(e){return buf}}
+async function exportX(){
+ const T0=totals(),n=st.trip.members.length,rows=st.rows,cs=[...new Set(rows.map(r=>r.cat||"Other"))];
+ const wb=new ExcelJS.Workbook(),S=wb.addWorksheet("Summary",{views:[{showGridLines:false,state:"frozen",ySplit:3}]}),
+ E=wb.addWorksheet("Expenses",{views:[{showGridLines:false,state:"frozen",xSplit:3,ySplit:4}]}),
+ P=wb.addWorksheet("Per Person",{views:[{showGridLines:false,state:"frozen",xSplit:3,ySplit:4}]});
+ const th={style:"thin",color:{argb:"FFBFBFBF"}},bd={top:th,left:th,bottom:th,right:th},INR='"₹"#,##0;[Red]-"₹"#,##0;"-"',
+ BL="FF0000FF",TOT="FFFFF2CC",SEC="FFD9E2F3",HD="FF1F3864",fx=(f,r)=>({formula:f,result:r});
+ const put=(ws,ref,v,o={})=>{const c=ws.getCell(ref);c.value=v;c.font={name:"Arial",size:10,bold:!!o.b,italic:!!o.i,color:{argb:o.c||"FF000000"}};
+  if(o.f)c.numFmt=o.f;if(o.fill)c.fill={type:"pattern",pattern:"solid",fgColor:{argb:o.fill}};if(o.al)c.alignment=o.al;if(!o.nb)c.border=bd;return c};
+ const hdr=(ws,row,c1,ls)=>{ls.forEach((l,i)=>put(ws,ws.getRow(row).getCell(c1+i).address,l,{b:1,c:"FFFFFFFF",fill:HD,al:{horizontal:"center",vertical:"middle",wrapText:true}}));ws.getRow(row).height=32};
+ const L=i=>String.fromCharCode(64+i);
+ // ---- Expenses
+ const R0=5,R1=R0+Math.max(16,rows.length+4)-1,T=R1+1;
+ put(E,"A1","Trip Expense Tracker – "+st.trip.name,{b:1,nb:1}).font={name:"Arial",size:16,bold:true,color:{argb:HD}};
+ put(E,"A2","Blue = type/edit these cells. Black = auto-calculated. Pick Status from the dropdown in column I; everything else updates automatically.",{i:1,c:"FF595959",nb:1});
+ hdr(E,4,1,["S.No","Place / Category","Expense","Qty","Rate (₹)","Total Cost","Per Person Share","Advance Required","Status","Amount Paid","Advance Paid","Advance Pending","Balance to Pay","Pay at Location","Notes"]);
+ const dv={type:"list",allowBlank:true,formulae:['"Paid,Advance Paid,Need to Pay,Pay at Location"'],showErrorMessage:true,errorTitle:"Invalid status",error:"Choose from the list",showInputMessage:true,promptTitle:"Status",prompt:"Paid / Advance Paid / Need to Pay / Pay at Location"};
+ for(let i=R0;i<=R1;i++){const r=rows[i-R0],c=r?calc(r):{t:0,paid:0,ap:0,pend:0,bal:0,loc:0};
+  put(E,"A"+i,i-R0+1,{al:{horizontal:"center"}});put(E,"B"+i,r?r.cat:null,{c:BL});put(E,"C"+i,r?r.item:null,{c:BL});
+  put(E,"D"+i,r?+r.qty||0:null,{c:BL,f:"0"});put(E,"E"+i,r?+r.rate||0:null,{c:BL,f:INR});
+  put(E,"F"+i,fx(`D${i}*E${i}`,c.t),{f:INR});put(E,"G"+i,fx(`F${i}/Summary!$B$6`,c.t/n),{f:INR});
+  put(E,"H"+i,r?+r.adv||0:null,{c:BL,f:INR});put(E,"I"+i,r?r.status:null,{c:BL,al:{horizontal:"center"}});
+  put(E,"J"+i,fx(`IF(I${i}="Paid",F${i},K${i})`,c.paid),{f:INR});put(E,"K"+i,fx(`IF(I${i}="Advance Paid",H${i},0)`,c.ap),{f:INR});
+  put(E,"L"+i,fx(`IF(OR(I${i}="Need to Pay",I${i}="Pay at Location"),H${i},0)`,c.pend),{f:INR});
+  put(E,"M"+i,fx(`F${i}-J${i}`,c.bal),{f:INR});put(E,"N"+i,fx(`IF(I${i}="Pay at Location",F${i}-J${i},0)`,c.loc),{f:INR});put(E,"O"+i,null,{c:BL});
+  E.getCell("I"+i).dataValidation=dv}
+ const tv={F:T0.t,G:T0.t/n,H:T0.adv,J:T0.paid,K:T0.ap,L:T0.pend,M:T0.bal,N:T0.loc};
+ "ABCDEFGHIJKLMNO".split("").forEach(k=>put(E,k+T,k=="B"?"TOTAL":tv[k]!==undefined?fx(`SUM(${k}${R0}:${k}${R1})`,tv[k]):null,{b:1,fill:TOT,f:INR}));
+ E.addConditionalFormatting({ref:`I${R0}:I${R1}`,rules:[["Paid","FFC6EFCE"],["Advance Paid","FFBDD7EE"],["Need to Pay","FFFFF9B0"],["Pay at Location","FFFFC7CE"]].map(([t,c],k)=>({type:"cellIs",operator:"equal",formulae:[`"${t}"`],priority:k+1,style:{fill:{type:"pattern",pattern:"solid",bgColor:{argb:c}}}}))});
+ put(E,"A"+(T+2),"Status guide",{b:1,nb:1});
+ [["Paid","Green – fully paid"],["Advance Paid","Light blue – advance is paid; the balance still has to be paid"],["Need to Pay","Light yellow – nothing paid yet; the advance shows as Advance Pending"],["Pay at Location","Light red – paid in cash/UPI at the place during the trip"]].forEach(([a,b],k)=>{put(E,"A"+(T+3+k),a,{b:1,nb:1});put(E,"C"+(T+3+k),b,{nb:1})});
+ put(E,"A"+(T+8),"All costs are split equally among members. Blank rows are spare for extra expenses.",{i:1,c:"FF595959",nb:1});
+ [6,18,26,6,11,13,13,13,14,13,13,13,13,14,40].forEach((w,i)=>E.getColumn(i+1).width=w);
+ // ---- Summary
+ const k=cs.length,pr0=21,pT=pr0+k+1,pnT=pT+2,pn0=pnT+3,pn1=pn0+n-1;
+ put(S,"A1","Trip Budget Summary – "+st.trip.name,{nb:1}).font={name:"Arial",size:16,bold:true,color:{argb:HD}};
+ put(S,"A2",(st.trip.dest?st.trip.dest+" · ":"")+"Change the blue cells only (budget per person, names). Everything else updates automatically.",{i:1,c:"FF595959",nb:1});
+ put(S,"A4","TRIP SETTINGS",{b:1,fill:SEC});put(S,"B4",null,{fill:SEC});
+ put(S,"A5","Budget per person");put(S,"B5",st.trip.budget,{c:BL,f:INR,fill:"FFFFFFE0"});
+ put(S,"A6","Number of members");put(S,"B6",fx(`COUNTA(A${pn0}:A${pn1})`,n),{f:"0"});
+ put(S,"A8","OVERALL BUDGET",{b:1,fill:SEC});put(S,"B8",null,{fill:SEC});
+ const B=st.trip.budget*n;
+ [["Total group budget","B5*B6",B],["Total planned expenses",`Expenses!F${T}`,T0.t],["Remaining budget (unspent)","B9-B10",B-T0.t],["Total amount paid so far",`Expenses!J${T}`,T0.paid],["Total advance paid",`Expenses!K${T}`,T0.ap],["Advance still to be paid",`Expenses!L${T}`,T0.pend],["Balance still to pay (all items)",`Expenses!M${T}`,T0.bal],["To pay at location",`Expenses!N${T}`,T0.loc]].forEach(([l,f,v],j)=>{
+  put(S,"A"+(9+j),l,{b:j==2});put(S,"B"+(9+j),fx(f,v),{f:INR,b:j==2,fill:j==2?TOT:null})});
+ put(S,"A19","PLACE / CATEGORY-WISE BUDGET",{b:1,fill:SEC});
+ hdr(S,20,1,["Place / Category","Budget (Total)","Per Person","Paid","Balance to Pay","Pay at Location","% of Total Paid"]);
+ const rg=c=>`Expenses!$${c}$${R0}:$${c}$${R1}`,cv=cs.map(c=>{let o={t:0,p:0,b:0,l:0};rows.filter(r=>(r.cat||"Other")==c).forEach(r=>{const x=calc(r);o.t+=x.t;o.p+=x.paid;o.b+=x.bal;o.l+=x.loc});return o});
+ cs.forEach((c,j)=>{const r=pr0+j,o=cv[j];put(S,"A"+r,c);
+  [["B","F",o.t],["D","J",o.p],["E","M",o.b],["F","N",o.l]].forEach(([col,src,v])=>put(S,col+r,fx(`SUMIF(${rg("B")},$A${r},${rg(src)})`,v),{f:INR}));
+  put(S,"C"+r,fx(`B${r}/$B$6`,o.t/n),{f:INR});put(S,"G"+r,fx(`IFERROR(D${r}/$D$${pT},0)`,T0.paid?o.p/T0.paid:0),{f:"0.0%"})});
+ const ro=pr0+k;put(S,"A"+ro,"Other / unlisted (new rows)");
+ [["B","F",T0.t],["D","J",T0.paid],["E","M",T0.bal],["F","N",T0.loc]].forEach(([col,src,v])=>put(S,col+ro,fx(`Expenses!${src}${T}-SUM(${col}${pr0}:${col}${ro-1})`,0),{f:INR}));
+ put(S,"C"+ro,fx(`B${ro}/$B$6`,0),{f:INR});put(S,"G"+ro,fx(`IFERROR(D${ro}/$D$${pT},0)`,0),{f:"0.0%"});
+ put(S,"A"+pT,"TOTAL",{b:1,fill:TOT});
+ [["B",T0.t],["C",T0.t/n],["D",T0.paid],["E",T0.bal],["F",T0.loc]].forEach(([col,v])=>put(S,col+pT,fx(`SUM(${col}${pr0}:${col}${ro})`,v),{b:1,f:INR,fill:TOT}));
+ put(S,"G"+pT,fx(`SUM(G${pr0}:G${ro})`,T0.paid?1:0),{b:1,f:"0.0%",fill:TOT});
+ put(S,"A"+pnT,"PER PERSON SUMMARY (equal split)",{b:1,fill:SEC});
+ hdr(S,pnT+1,1,["Name","Budget","Total Expense Share","Amount Paid","Advance Paid","Advance Pending","Balance to Pay","Pay at Location","Remaining Budget"]);
+ st.trip.members.forEach((m,j)=>{const r=pn0+j;put(S,"A"+r,m,{c:BL});
+  [["B","$B$5",st.trip.budget],["C","$B$10",T0.t/n],["D","$B$12",T0.paid/n],["E","$B$13",T0.ap/n],["F","$B$14",T0.pend/n],["G","$B$15",T0.bal/n],["H","$B$16",T0.loc/n]].forEach(([col,s,v])=>put(S,col+r,fx(col=="B"?s:s+"/$B$6",v),{f:INR}));
+  put(S,"I"+r,fx(`B${r}-C${r}`,st.trip.budget-T0.t/n),{f:INR})});
+ const pt=pn1+1;put(S,"A"+pt,"TOTAL",{b:1,fill:TOT});
+ "BCDEFGHI".split("").forEach(c=>put(S,c+pt,fx(`SUM(${c}${pn0}:${c}${pn1})`,0),{b:1,f:INR,fill:TOT}));
+ put(S,"A"+(pt+2),"Note: Remaining Budget = Budget − Total Expense Share (spare money each person has left).",{i:1,c:"FF595959",nb:1});
+ S.getColumn(1).width=32;for(let c=2;c<=9;c++)S.getColumn(c).width=17;
+ // ---- Per Person
+ put(P,"A1","Expense Split for Each Person – "+st.trip.name,{nb:1}).font={name:"Arial",size:16,bold:true,color:{argb:HD}};
+ put(P,"A2","Each person's share of every expense. Names come from the Summary sheet.",{i:1,c:"FF595959",nb:1});
+ hdr(P,4,1,["S.No","Expense","Total Cost"]);
+ st.trip.members.forEach((m,j)=>hdr(P,4,4+j,[""]),put(P,L(4+0)+"4",null));
+ st.trip.members.forEach((m,j)=>put(P,L(4+j)+"4",fx(`Summary!A${pn0+j}`,m),{b:1,c:"FFFFFFFF",fill:HD,al:{horizontal:"center",vertical:"middle",wrapText:true}}));
+ for(let i=R0;i<=R1;i++){const r=rows[i-R0],t=r?calc(r).t:0;
+  put(P,"A"+i,fx(`Expenses!A${i}`,i-R0+1),{al:{horizontal:"center"}});put(P,"B"+i,fx(`IF(Expenses!C${i}="","",Expenses!C${i})`,r?r.item:""));
+  put(P,"C"+i,fx(`IF(Expenses!C${i}="","",Expenses!F${i})`,r?t:""),{f:INR});
+  st.trip.members.forEach((m,j)=>put(P,L(4+j)+i,fx(`IF(Expenses!$C${i}="","",Expenses!$G${i})`,r?t/n:""),{f:INR}))}
+ put(P,"A"+T,null,{fill:TOT});put(P,"B"+T,"TOTAL EXPENSE",{b:1,fill:TOT});put(P,"C"+T,fx(`SUM(C${R0}:C${R1})`,T0.t),{b:1,f:INR,fill:TOT});
+ st.trip.members.forEach((m,j)=>put(P,L(4+j)+T,fx(`SUM(${L(4+j)}${R0}:${L(4+j)}${R1})`,T0.t/n),{b:1,f:INR,fill:TOT}));
+ [["Budget per person",()=>"Summary!$B$5",st.trip.budget],["Remaining budget",c=>`${c}${T+1}-${c}${T}`,st.trip.budget-T0.t/n],["Amount paid so far",()=>`Expenses!$J$${T}/Summary!$B$6`,T0.paid/n],["   of which advance paid",()=>`Expenses!$K$${T}/Summary!$B$6`,T0.ap/n],["Advance still pending",()=>`Expenses!$L$${T}/Summary!$B$6`,T0.pend/n],["Balance still to pay",()=>`Expenses!$M$${T}/Summary!$B$6`,T0.bal/n],["To pay at location",()=>`Expenses!$N$${T}/Summary!$B$6`,T0.loc/n]].forEach(([l,f,v],j)=>{
+  const r=T+1+j;put(P,"A"+r,null);put(P,"B"+r,l,{b:j<2});put(P,"C"+r,null);
+  st.trip.members.forEach((m,q)=>{const c=L(4+q);put(P,c+r,fx(f(c),v),{f:INR,b:j==1,fill:j==1?TOT:null})})});
+ const sc0=4+n,GLt=i=>{let s="";while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+ P.mergeCells(3,sc0,3,sc0+n-1);put(P,GLt(sc0)+"3","WHO HAS PAID THIS SPLIT? – pick a status for each person and expense",{b:1,fill:SEC});
+ st.trip.members.forEach((m,j)=>{const sl=GLt(sc0+j),pl=GLt(4+j);
+  put(P,sl+"4",fx(`${pl}4&" – Paid?"`,m+" – Paid?"),{b:1,c:"FFFFFFFF",fill:HD,al:{horizontal:"center",vertical:"middle",wrapText:true}});
+  for(let i=R0;i<=R1;i++){const r=rows[i-R0];put(P,sl+i,r?(r.status=="Paid"?"Paid":"Need to Pay"):null,{c:BL,al:{horizontal:"center"}});
+   P.getCell(sl+i).dataValidation={type:"list",allowBlank:true,formulae:['"Paid,Advance Paid,Need to Pay"']}}
+  put(P,sl+T,null,{fill:TOT});P.getColumn(sc0+j).width=17;
+  const rg=`${sl}${R0}:${sl}${R1}`,paidItems=rows.filter(r=>r.status=="Paid"),pc=paidItems.length,tp=paidItems.reduce((a,r)=>a+calc(r).t/n,0);
+  [["Expenses marked Paid",`COUNTIF(${rg},"Paid")`,pc,"0"],["Expenses with advance paid",`COUNTIF(${rg},"Advance Paid")`,0,"0"],["Expenses yet to pay",`COUNTIF(${rg},"Need to Pay")`,rows.length-pc,"0"],
+   ["Share fully paid (₹)",`SUMIF(${rg},"Paid",${pl}${R0}:${pl}${R1})`,tp,INR],["Share still to pay (₹)",`${pl}${T}-${pl}${T+11}`,T0.t/n-tp,INR]].forEach(([lab,f,v,fm],q)=>{
+   const r=T+8+q;if(j==0){put(P,"A"+r,null);put(P,"B"+r,lab,{b:q>=3});put(P,"C"+r,null)}
+   put(P,GLt(4+j)+r,fx(f,v),{f:fm,b:q==4,fill:q==4?TOT:null})})});
+ P.addConditionalFormatting({ref:`${GLt(sc0)}${R0}:${GLt(sc0+n-1)}${R1}`,rules:[["Paid","FFC6EFCE"],["Advance Paid","FFBDD7EE"],["Need to Pay","FFFFF9B0"]].map(([t,c],q)=>({type:"cellIs",operator:"equal",formulae:[`"${t}"`],priority:q+10,style:{fill:{type:"pattern",pattern:"solid",bgColor:{argb:c}}}}))});
+ const w0=T+15,wr0=w0+2,wr1=wr0+n-1,tr=wr1+1,due=Math.round(T0.t/n);
+ "BCDEFGH".split("").forEach(c=>put(P,c+w0,null,{fill:SEC}));
+ put(P,"B"+w0,"WHO HAS PAID? – separate tracker (not linked to any other sheet)",{b:1,fill:SEC});
+ hdr(P,w0+1,2,["Name","Amount Due (₹)","Payment Status","Advance Paid (₹) (only if Advance Paid)","Amount Received","Balance to Pay","Notes"]);P.getRow(w0+1).height=45;
+ st.trip.members.forEach((m,j)=>{const r=wr0+j;put(P,"B"+r,m,{c:BL});put(P,"C"+r,due,{c:BL,f:INR});put(P,"D"+r,"Need to Pay",{c:BL,al:{horizontal:"center"}});put(P,"E"+r,null,{c:BL,f:INR});
+  put(P,"F"+r,fx(`IF(D${r}="Paid",C${r},IF(D${r}="Advance Paid",E${r},0))`,0),{f:INR});put(P,"G"+r,fx(`C${r}-F${r}`,due),{f:INR});put(P,"H"+r,null,{c:BL});
+  P.getCell("D"+r).dataValidation={type:"list",allowBlank:true,formulae:['"Paid,Advance Paid,Need to Pay"']}});
+ put(P,"B"+tr,"TOTAL",{b:1,fill:TOT});put(P,"D"+tr,null,{fill:TOT});put(P,"H"+tr,null,{fill:TOT});
+ [["C",due*n],["E",0],["F",0],["G",due*n]].forEach(([c,v])=>put(P,c+tr,fx(`SUM(${c}${wr0}:${c}${wr1})`,v),{b:1,f:INR,fill:TOT}));
+ [["People fully paid","Paid",0],["People who paid advance only","Advance Paid",0],["People yet to pay","Need to Pay",n]].forEach(([l,k2,v],j)=>{put(P,"B"+(tr+2+j),l,{b:1});put(P,"C"+(tr+2+j),fx(`COUNTIF($D$${wr0}:$D$${wr1},"${k2}")`,v),{f:"0"})});
+ P.addConditionalFormatting({ref:`D${wr0}:D${wr1}`,rules:[["Paid","FFC6EFCE"],["Advance Paid","FFBDD7EE"],["Need to Pay","FFFFF9B0"]].map(([t,c],q)=>({type:"cellIs",operator:"equal",formulae:[`"${t}"`],priority:q+1,style:{fill:{type:"pattern",pattern:"solid",bgColor:{argb:c}}}}))});
+ [6,32,13].forEach((w,i)=>P.getColumn(i+1).width=w);for(let q=0;q<n;q++)P.getColumn(4+q).width=15;
+ 
+ const C=wb.addWorksheet("Spending Chart",{views:[{showGridLines:false}]}),rem=T0.bal;
+ put(C,"A1","Where the money went – "+st.trip.name,{nb:1}).font={name:"Arial",size:16,bold:true,color:{argb:HD}};
+ put(C,"A2","The chart shows amounts marked Paid. Once every expense is Paid, it shows your final spending breakdown.",{i:1,c:"FF595959",nb:1});
+ put(C,"A3",fx('IF(Summary!$B$15=0,"All expenses paid – final spending breakdown","In progress – "&TEXT(Summary!$B$15,"₹#,##0")&" still to pay")',rem==0?"All expenses paid – final spending breakdown":"In progress – "+inr(rem)+" still to pay"),{b:1,nb:1});
+ hdr(C,4,1,["Category","Amount Paid","% of Total Paid"]);
+ cs.forEach((c,j)=>{const r=5+j;put(C,"A"+r,fx(`Summary!A${pr0+j}`,c));put(C,"B"+r,fx(`Summary!D${pr0+j}`,cv[j].p),{f:INR});put(C,"C"+r,fx(`IFERROR(B${r}/$B$${5+k},0)`,T0.paid?cv[j].p/T0.paid:0),{f:"0.0%"})});
+ put(C,"A"+(5+k),"TOTAL",{b:1,fill:TOT});put(C,"B"+(5+k),fx(`Summary!D${pT}`,T0.paid),{b:1,f:INR,fill:TOT});put(C,"C"+(5+k),fx(`SUM(C5:C${4+k})`,T0.paid?1:0),{b:1,f:"0.0%",fill:TOT});
+ put(C,"P4","Chart category",{b:1});put(C,"Q4","Paid",{b:1});
+ cs.forEach((c,j)=>{const r=5+j;put(C,"P"+r,fx(`A${r}`,c));put(C,"Q"+r,fx(`IF(B${r}>0,B${r},NA())`,cv[j].p>0?cv[j].p:{error:"#N/A"}),{f:INR})});
+ C.getColumn(16).hidden=true;C.getColumn(17).hidden=true;
+ C.getColumn(1).width=24;C.getColumn(2).width=16;C.getColumn(3).width=16;
+ const buf=await addChart(await wb.xlsx.writeBuffer(),k,pr0);
+ const fn=(st.trip.name||"trip").replace(/[^\w\- ]/g,"")+" Budget.xlsx",blob=new Blob([buf]);
+ try{const d=window.claude?await claude.use("downloads"):null;
+  if(d)return await d.save({filename:fn,data:blob})}catch(e){}
+ const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
+function resetAll(){if(confirm("Start a new trip? Your current data will be cleared.")){st={trip:null,rows:[]};save();$("tn").value=$("td").value=$("tb").value=$("tm").value="";go("setup")}}
+go(st.trip?"exp":"setup");
+</script></body></html>
