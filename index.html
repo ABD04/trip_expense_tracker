@@ -64,6 +64,23 @@ tr.tot td{font-weight:700;background:var(--acc2);border-top:2px solid var(--acc)
 .dn{display:flex;gap:24px;align-items:center;flex-wrap:wrap}.dl{flex:1;min-width:240px;display:grid;gap:10px}.dr{display:flex;justify-content:space-between;gap:8px}.dr span{display:flex;align-items:center}.dr i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
 .hid{display:none}.warn{background:var(--loc);padding:10px 14px;border-radius:12px;margin-bottom:12px}
 
+/* Setup page: fit in ONE screen at any desktop/tablet height (everything scales with the window height; phones keep normal scroll) */
+@media(min-width:601px) and (min-height:380px){
+ html:has(#setup:not(.hid)),body:has(#setup:not(.hid)){height:100%;overflow:hidden}
+ body:has(#setup:not(.hid)){font-size:clamp(10px,2.6vh,16px);line-height:1.3}
+ body:has(#setup:not(.hid)) .wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;justify-content:center;padding-top:6px;padding-bottom:6px}
+ body:has(#setup:not(.hid)) header{margin:0 0 .7em}
+ body:has(#setup:not(.hid)) header h1{font-size:2.5em;line-height:1.1}
+ body:has(#setup:not(.hid)) header p{font-size:1em;margin:.2em 0 0}
+ body:has(#setup:not(.hid)) #setup{width:100%;margin:0 auto;padding:1em 1.4em}
+ body:has(#setup:not(.hid)) #setup h2{font-size:1.6em;line-height:1.15}
+ body:has(#setup:not(.hid)) #setup label{margin:.7em 0 .25em}
+ body:has(#setup:not(.hid)) #setup input[type=text],body:has(#setup:not(.hid)) #setup input[type=number]{padding:.5em .8em;border-radius:.7em}
+ body:has(#setup:not(.hid)) #setup .cats{gap:.45em;margin-top:.3em}
+ body:has(#setup:not(.hid)) #setup .cats label{padding:.3em .8em;margin:0}
+ body:has(#setup:not(.hid)) #setup p{margin:.9em 0 0}
+ body:has(#setup:not(.hid)) #setup button{padding:.5em 1em}
+}
 /* Tablet */
 @media(max-width:900px){.wrap{padding:12px}.card{padding:16px}}
 /* Mobile */
